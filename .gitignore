@@ -4,7 +4,6 @@ ehthumbs.db
 
 # Folder config file
 Desktop.ini
-<<<<<<< HEAD
 
 .vs
 Compiler/bin/*/
@@ -13,5 +12,3 @@ Compiler/obj
 
 packages/*
 !repo*
-=======
->>>>>>> 1c9f22060f54c81ddfc1d7e915b5d40ceb6bd7e5
