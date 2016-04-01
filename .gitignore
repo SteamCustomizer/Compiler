@@ -9,6 +9,7 @@ Desktop.ini
 Compiler/bin/*/
 !Release
 Compiler/obj
+Compiler/*.csproj.user
 
 packages/*
 !repo*
