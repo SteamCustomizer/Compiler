@@ -70,6 +70,8 @@ namespace Compiler
 
         public void Transform(Schema.SkinFile.Attachment.Transform trnsfrm)
         {
+            if (dib.IsNull) return;
+
             if (FreeImage.GetWidth(dib) <= 1 || FreeImage.GetHeight(dib) <= 1)
                 return;
             FREE_IMAGE_FILTER filter = FREE_IMAGE_FILTER.FILTER_BSPLINE;
@@ -174,6 +176,8 @@ namespace Compiler
 
         public void ApplyFilters(List<Schema.SkinFile.Attachment.Filter> filters)
         {
+            if (dib.IsNull) return;
+
             foreach (Schema.SkinFile.Attachment.Filter filter in filters)
             {
                 switch (filter.name)
@@ -215,6 +219,8 @@ namespace Compiler
 
         public bool SaveSprite(string filename, int[] matrix)
         {
+            if (dib.IsNull) return false;
+
             FIBITMAP sprite = FreeImage.RotateEx(dib, 0, -matrix[0], -matrix[1], 0, 0, true);
             sprite = FreeImage.EnlargeCanvas<RGBQUAD>(sprite, 0, 0, -(int)FreeImage.GetWidth(dib) + matrix[2], -(int)FreeImage.GetHeight(dib) + matrix[3], new RGBQUAD(Color.Transparent), FREE_IMAGE_COLOR_OPTIONS.FICO_RGBA);
             return FreeImage.SaveEx(sprite, filename);
@@ -222,6 +228,8 @@ namespace Compiler
 
         public bool Save(string filename, FREE_IMAGE_FORMAT format = FREE_IMAGE_FORMAT.FIF_UNKNOWN, FREE_IMAGE_SAVE_FLAGS flags = FREE_IMAGE_SAVE_FLAGS.DEFAULT)
         {
+            if (dib.IsNull) return false;
+
             return FreeImage.SaveEx(dib, filename, format, flags);
         }
     }
