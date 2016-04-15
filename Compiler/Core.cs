@@ -18,12 +18,14 @@ namespace Compiler
 
     static class Core
     {
-        //private static string defaultSkinBaseName = "default";
+        private static string defaultSkinBaseName = "default";
+        private static string defaultSkinFolderName = "skins";
+
         public static bool backupEnabled = true;
         public static bool debugMode = false;
         public static bool activateSkin = true;
 
-        static public void Compile(FileInfo skinFileInfo, DirectoryInfo steamDirectoryInfo)
+        static public void Compile(FileInfo skinFileInfo, DirectoryInfo steamDirectoryInfo, DirectoryInfo baseDirectoryInfo = null)
         {
             if (!FreeImage.IsAvailable()) throw new Exception("FreeImage.dll not found");
             if (!skinFileInfo.Exists) throw new Exception("Definition file doesn't exist");
@@ -39,22 +41,32 @@ namespace Compiler
             validatingReader.Schema = schemaGenerator.Generate(typeof(SkinFile));
             SkinFile skinFile = new JsonSerializer().Deserialize<SkinFile>(validatingReader);
 
-            //string skinSource = (skinFile.metadata.skinBase.ToLower() == defaultSkinBaseName ? steamDirectoryInfo.FullName : steamDirectoryInfo.FullName + "/skins/" + skinFile.metadata.skinBase) + "/";
+            //string skinSourcePath = (skinFile.metadata.skinBase.ToLower() == defaultSkinBaseName ? steamDirectoryInfo.FullName : steamDirectoryInfo.FullName + "/skins/" + skinFile.metadata.skinBase) + "/";
 
-            /// NOTE: Allow only default skin for now
+            string skinSourcePath;
+            if (skinFile.metadata.template.skinBase == defaultSkinBaseName)
+                skinSourcePath = steamDirectoryInfo.FullName + "/";
+            else
+            {
+                string baseDirectory;
+                if (baseDirectoryInfo != null)
+                    baseDirectory = baseDirectoryInfo.FullName + "/" + skinFile.metadata.template.skinBase;
+                else
+                    baseDirectory = steamDirectoryInfo.FullName + "/" + defaultSkinFolderName + "/" + skinFile.metadata.template.skinBase;
 
-            string skinSource = steamDirectoryInfo.FullName + "/";
+                skinSourcePath = baseDirectory + "/";
+            }
 
             /// TODO: Make copy of 3rd party skin and use it as a base
 
-            if (!Directory.Exists(skinSource)) throw new Exception("Skin source '" + skinSource + "' directory doesn't exist");
+            if (!Directory.Exists(skinSourcePath)) throw new Exception("Skin source '" + skinSourcePath + "' directory doesn't exist");
 
             if (skinFile.files != null)
             {
                 // iterate through files
                 foreach (KeyValuePair<string, SkinFile.File> f in skinFile.files)
                 {
-                    string path = skinSource + f.Key;
+                    string path = skinSourcePath + f.Key;
                     if (!File.Exists(path))
                     {
                         StreamWriter writer = File.CreateText(path);
@@ -85,10 +97,10 @@ namespace Compiler
 
             //if (skinFile.metadata.folderName == null) throw new Exception("Undefined skin folder name");
             string folderName = skinFile.metadata.template.name;
-            if (skinFile.metadata.skin.name != null && skinFile.metadata.skin.author!= null)
+            if (skinFile.metadata.skin.name != null && skinFile.metadata.skin.author != null)
                 folderName = skinFile.metadata.skin.name + " #" + skinFile.metadata.skin.id;
 
-            string destinationPath = steamDirectoryInfo.FullName + "/skins/" + folderName;
+            string destinationPath = steamDirectoryInfo.FullName + "/" + defaultSkinFolderName + "/" + folderName;
 
             try
             {
@@ -104,6 +116,11 @@ namespace Compiler
                 }
 
                 Directory.CreateDirectory(destinationPath);
+
+                /// NOTE: Copy base directory prior to writing modified files
+
+                if (skinFile.metadata.template.skinBase != defaultSkinBaseName)
+                    DirectoryCopy(skinSourcePath, destinationPath, true);
 
                 foreach (KeyValuePair<string, KeyValue> kv in skinKeyValueList)
                 {
@@ -208,7 +225,8 @@ namespace Compiler
                             case "accentColor":
                             case "accentTextColor":
                                 {
-                                    metadataIni.IniWriteValue(sectionName, propertyName, "0x" + propertyValue);
+                                    if (propertyValue.Length > 0)
+                                        metadataIni.IniWriteValue(sectionName, propertyName, "0x" + propertyValue);
                                     break;
                                 }
                             case "thumbnail":
@@ -218,7 +236,7 @@ namespace Compiler
                                         string fileName = "thumb.jpg";
                                         using (Base64Image image = new Base64Image(propertyValue))
                                         {
-                                            if(image.Save(destinationPath + "/" + fileName, FREE_IMAGE_FORMAT.FIF_JPEG, FREE_IMAGE_SAVE_FLAGS.JPEG_QUALITYSUPERB))
+                                            if (image.Save(destinationPath + "/" + fileName, FREE_IMAGE_FORMAT.FIF_JPEG, FREE_IMAGE_SAVE_FLAGS.JPEG_QUALITYSUPERB))
                                                 metadataIni.IniWriteValue(sectionName, propertyName, fileName);
                                         }
                                     }
@@ -252,9 +270,9 @@ namespace Compiler
             metadataIni.IniWriteValue(iniTemplateSection, "Color", skinFile.metadata.color != null ? skinFile.metadata.color : "0x1E1E1E");
             */
             // activate skin
-            File.Delete(steamDirectoryInfo.FullName + "/skins/.active");
+            File.Delete(steamDirectoryInfo.FullName + "/" + defaultSkinFolderName + "/.active");
             if (activateSkin)
-                File.WriteAllText(steamDirectoryInfo.FullName + "/skins/.active", folderName);
+                File.WriteAllText(steamDirectoryInfo.FullName + "/" + defaultSkinFolderName + "/.active", folderName);
 
             // print debug
             if (debugMode)
@@ -269,6 +287,44 @@ namespace Compiler
                     buffer += "\r\n";
                 }
                 File.WriteAllText("debug.log", buffer);
+            }
+        }
+
+        private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException(
+                    "Source directory does not exist or could not be found: "
+                    + sourceDirName);
+            }
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+            // If the destination directory doesn't exist, create it.
+            if (!Directory.Exists(destDirName))
+            {
+                Directory.CreateDirectory(destDirName);
+            }
+
+            // Get the files in the directory and copy them to the new location.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string temppath = Path.Combine(destDirName, file.Name);
+                file.CopyTo(temppath, false);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location.
+            if (copySubDirs)
+            {
+                foreach (DirectoryInfo subdir in dirs)
+                {
+                    string temppath = Path.Combine(destDirName, subdir.Name);
+                    DirectoryCopy(subdir.FullName, temppath, copySubDirs);
+                }
             }
         }
 

@@ -59,10 +59,10 @@ namespace Compiler.Schema
                 [JsonProperty(Required = Required.DisallowNull)]
                 public string description { get; set; }
 
-                [JsonRequired]
+                [JsonProperty(Required = Required.DisallowNull)]
                 public string primaryColor { get; set; }
 
-                [JsonRequired]
+                [JsonProperty(Required = Required.DisallowNull)]
                 public string primaryTextColor { get; set; }
                 
                 [JsonProperty(Required = Required.DisallowNull)]
