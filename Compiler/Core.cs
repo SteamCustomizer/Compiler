@@ -41,8 +41,6 @@ namespace Compiler
             validatingReader.Schema = schemaGenerator.Generate(typeof(SkinFile));
             SkinFile skinFile = new JsonSerializer().Deserialize<SkinFile>(validatingReader);
 
-            //string skinSourcePath = (skinFile.metadata.skinBase.ToLower() == defaultSkinBaseName ? steamDirectoryInfo.FullName : steamDirectoryInfo.FullName + "/skins/" + skinFile.metadata.skinBase) + "/";
-
             string skinSourcePath;
             if (skinFile.metadata.template.skinBase == defaultSkinBaseName)
                 skinSourcePath = steamDirectoryInfo.FullName + "/";
